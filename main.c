@@ -1,5 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
+
 #define MAX_NAME_LEN 256
 
 int create_file(const char *name);
@@ -24,7 +28,7 @@ int main( int argc, char *args[]) {
     fptr = fopen(filename, "r");
 
     if (fptr == NULL) {
-        printf("The file is not opened.");
+        printf("The file could not be opened.");
         return 1;
     }
 
