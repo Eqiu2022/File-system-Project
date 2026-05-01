@@ -21,7 +21,7 @@ struct File{
 
 p_thread_mutex_t mutex_lock;
 struct File files[MAX_FILES];
-sem_t file_semaphore;
+sem_t open_sem;
 
 int main( int argc, char *args[]) {
 
@@ -54,5 +54,25 @@ int create_file(const char *name) {
         }
     }
     pthread_mutex_unlock(&mutex_lock);
+    return -1; 
+}
+
+int open_file(const char *name) {
+    sem_wait(&open_sem);
+    pthread_mutex_lock(&mutex_lock);
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (strcmp(files[i].name, name) == 0) {
+            if (files[i].is_open) {
+                pthread_mutex_unlock(&mutex_lock);
+                sem_post(&open_sem);
+                return -1; 
+            }
+            files[i].is_open = 1;
+            pthread_mutex_unlock(&mutex_lock);
+            return 0; 
+        }
+    }
+    pthread_mutex_unlock(&mutex_lock);
+    sem_post(&open_sem);
     return -1; 
 }
