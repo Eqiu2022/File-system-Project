@@ -19,7 +19,7 @@ struct File{
     int size;
 };
 
-p_thread_mutex_t mutex_lock;
+pthread_mutex_t mutex_lock;
 struct File files[MAX_FILES];
 sem_t open_sem;
 
