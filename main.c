@@ -12,9 +12,11 @@ int create_file(const char *name);
 int open_file(const char *name);
 int close_file(const char *name);
 int search_file(const char *name);
+void *worker(void *arg);
 
-struct File{
+struct File {
     char name[MAX_NAME_LEN];
+    char op[16];
     int is_open;
     int size;
 };
@@ -23,22 +25,28 @@ pthread_mutex_t mutex_lock;
 struct File files[MAX_FILES];
 sem_t open_sem;
 
-int main( int argc, char *args[]) {
+int main(int argc, char *argv[])
+{
+    pthread_mutex_init(&mutex_lock, NULL);
+    sem_init(&open_sem, 0, 4);
 
-    FILE* fptr;
-    char filename[100];
+    struct File f;
+    pthread_t tid;
+    char choice[4];
 
-    printf("Enter the filename: ");
-    scanf("%s", filename);
-    
-    fptr = fopen(filename, "r");
+    do {
+        printf("Enter operation (create/open/close/search): ");
+        scanf("%s", f.op);
+        printf("Enter filename: ");
+        scanf("%s", f.name);
 
-    if (fptr == NULL) {
-        printf("The file could not be opened.");
-        return 1;
-    }
+        pthread_create(&tid, NULL, worker, &f);
+        pthread_join(tid, NULL);
 
-    fclose(fptr);
+        printf("Continue? (y/n): ");
+        scanf("%s", choice);
+    } while (strcmp(choice, "y") == 0);
+
     return 0;
 }
 
@@ -46,15 +54,16 @@ int create_file(const char *name) {
     pthread_mutex_lock(&mutex_lock);
     for (int i = 0; i < MAX_FILES; i++) {
         if (files[i].name[0] == '\0') {
-            strncpy(files[i].name, name, MAX_NAME_LEN);
+            strncpy(files[i].name, name, MAX_NAME_LEN - 1);
+            files[i].name[MAX_NAME_LEN - 1] = '\0';
             files[i].is_open = 0;
             files[i].size = 0;
             pthread_mutex_unlock(&mutex_lock);
-            return 0; 
+            return 0;
         }
     }
     pthread_mutex_unlock(&mutex_lock);
-    return -1; 
+    return -1;
 }
 
 int open_file(const char *name) {
@@ -65,14 +74,73 @@ int open_file(const char *name) {
             if (files[i].is_open) {
                 pthread_mutex_unlock(&mutex_lock);
                 sem_post(&open_sem);
-                return -1; 
+                return -1;
             }
             files[i].is_open = 1;
             pthread_mutex_unlock(&mutex_lock);
-            return 0; 
+            return 0;
         }
     }
     pthread_mutex_unlock(&mutex_lock);
     sem_post(&open_sem);
-    return -1; 
+    return -1;
+}
+
+int close_file(const char *name) {
+    pthread_mutex_lock(&mutex_lock);
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (strcmp(files[i].name, name) == 0) {
+            if (!files[i].is_open) {
+                pthread_mutex_unlock(&mutex_lock);
+                return -1;
+            }
+            files[i].is_open = 0;
+            pthread_mutex_unlock(&mutex_lock);
+            sem_post(&open_sem);
+            return 0;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lock);
+    return -1;
+}
+
+int search_file(const char *name) {
+    pthread_mutex_lock(&mutex_lock);
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (strcmp(files[i].name, name) == 0) {
+            printf("File '%s' found. open=%d size=%d\n",
+                   name, files[i].is_open, files[i].size);
+            pthread_mutex_unlock(&mutex_lock);
+            return i;
+        }
+    }
+    printf("File '%s' not found.\n", name);
+    pthread_mutex_unlock(&mutex_lock);
+    return -1;
+}
+
+void *worker(void *arg) {
+    struct File *f = (struct File *)arg;
+
+    if (strcmp(f->op, "create") == 0) {
+        if (create_file(f->name) == 0)
+            printf("File '%s' created successfully.\n", f->name);
+        else
+            printf("Failed to create file '%s'.\n", f->name);
+    } else if (strcmp(f->op, "open") == 0) {
+        if (open_file(f->name) == 0)
+            printf("File '%s' opened successfully.\n", f->name);
+        else
+            printf("Failed to open file '%s'.\n", f->name);
+    } else if (strcmp(f->op, "close") == 0) {
+        if (close_file(f->name) == 0)
+            printf("File '%s' closed successfully.\n", f->name);
+        else
+            printf("Failed to close file '%s'.\n", f->name);
+    } else if (strcmp(f->op, "search") == 0) {
+        search_file(f->name);
+    } else {
+        printf("Unknown operation '%s'.\n", f->op);
+    }
+    return NULL;
 }
