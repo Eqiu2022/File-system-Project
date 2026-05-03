@@ -18,7 +18,6 @@ struct File {
     char name[MAX_NAME_LEN];
     char op[16];
     int is_open;
-    int size;
 };
 
 pthread_mutex_t mutex_lock;
@@ -61,7 +60,6 @@ int create_file(const char *name) {
             strncpy(files[i].name, name, MAX_NAME_LEN - 1);
             files[i].name[MAX_NAME_LEN - 1] = '\0';
             files[i].is_open = 0;
-            files[i].size = 0;
             pthread_mutex_unlock(&mutex_lock);
             return 0;
         }
@@ -112,8 +110,8 @@ int search_file(const char *name) {
     pthread_mutex_lock(&mutex_lock);
     for (int i = 0; i < MAX_FILES; i++) {
         if (strcmp(files[i].name, name) == 0) {
-            printf("File '%s' found. open=%d size=%d\n",
-                   name, files[i].is_open, files[i].size);
+            printf("File '%s' found. open=%d\n",
+                   name, files[i].is_open);
             pthread_mutex_unlock(&mutex_lock);
             return i;
         }
