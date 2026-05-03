@@ -37,15 +37,19 @@ int main(int argc, char *argv[])
     do {
         printf("Enter operation (create/open/close/search): ");
         scanf("%s", f.op);
+        getchar();
         printf("Enter filename: ");
         scanf("%s", f.name);
+        getchar();
 
         pthread_create(&tid, NULL, worker, &f);
         pthread_join(tid, NULL);
 
         printf("Continue? (y/n): ");
         scanf("%s", choice);
-    } while (strcmp(choice, "y") == 0);
+        getchar();
+    } 
+    while (strcmp(choice, "y") == 0);
 
     return 0;
 }
