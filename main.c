@@ -12,12 +12,14 @@ int create_file(const char *name);
 int open_file(const char *name);
 int close_file(const char *name);
 int search_file(const char *name);
+int write_file(const char *name, const char *data);
 void *worker(void *arg);
 
 struct File {
     char name[MAX_NAME_LEN];
     char op[16];
     int is_open;
+    char data[1024];
 };
 
 pthread_mutex_t mutex_lock;
@@ -33,8 +35,8 @@ int main(int argc, char *argv[])
     pthread_t tid;
     char choice[4];
 
-    do {
-        printf("Enter operation (create/open/close/search): ");
+    while(strcmp(choice, "exit") != 0){
+        printf("Enter operation (create/open/close/search/write/read/exit): ");
         scanf("%s", f.op);
         getchar();
         printf("Enter filename: ");
@@ -43,12 +45,7 @@ int main(int argc, char *argv[])
 
         pthread_create(&tid, NULL, worker, &f);
         pthread_join(tid, NULL);
-
-        printf("Continue? (y/n): ");
-        scanf("%s", choice);
-        getchar();
     } 
-    while (strcmp(choice, "y") == 0);
 
     return 0;
 }
@@ -121,6 +118,26 @@ int search_file(const char *name) {
     return -1;
 }
 
+int write_file(const char *name, const char *data) {
+    pthread_mutex_lock(&mutex_lock);
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (strcmp(files[i].name, name) == 0) {
+            if (!files[i].is_open) {   
+                printf("File '%s' is not open for writing.\n", name);      
+                pthread_mutex_unlock(&mutex_lock);
+                return -1;
+            }
+            strncpy(files[i].data, data, sizeof(files[i].data) - 1);
+            files[i].data[sizeof(files[i].data) - 1] = '\0';
+            pthread_mutex_unlock(&mutex_lock);
+            return 0;
+        }
+    }
+    pthread_mutex_unlock(&mutex_lock);
+    return -1;
+}
+
+
 void *worker(void *arg) {
     struct File *f = (struct File *)arg;
 
@@ -141,7 +158,17 @@ void *worker(void *arg) {
             printf("Failed to close file '%s'.\n", f->name);
     } else if (strcmp(f->op, "search") == 0) {
         search_file(f->name);
-    } else {
+    } else if (strcmp(f->op, "write") == 0) {
+        printf("Enter data to write: ");
+        fgets(f->data, sizeof(f->data), stdin);
+        if (write_file(f->name, f->data) == 0)
+            printf("Data written to file '%s' successfully.\n", f->name);
+        else
+            printf("Failed to write data to file '%s'.\n", f->name);
+    } else if (strcmp(f->op, "read") == 0) {
+        read_file(f->name, f->data);
+    }
+    else {
         printf("Unknown operation '%s'.\n", f->op);
     }
     return NULL;
