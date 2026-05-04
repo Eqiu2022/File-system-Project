@@ -36,10 +36,12 @@ int main(int argc, char *argv[])
     pthread_t tid;
     char choice[4];
 
-    while(strcmp(choice, "exit") != 0){
+    while(1){
         printf("Enter operation (create/open/close/search/write/read/exit): ");
         scanf("%s", f.op);
         getchar();
+        if(strcmp(f.op, "exit") == 0)
+            break;
         printf("Enter filename: ");
         scanf("%s", f.name);
         getchar();
