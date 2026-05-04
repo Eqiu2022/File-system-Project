@@ -13,6 +13,7 @@ int open_file(const char *name);
 int close_file(const char *name);
 int search_file(const char *name);
 int write_file(const char *name, const char *data);
+
 void *worker(void *arg);
 
 struct File {
@@ -165,8 +166,6 @@ void *worker(void *arg) {
             printf("Data written to file '%s' successfully.\n", f->name);
         else
             printf("Failed to write data to file '%s'.\n", f->name);
-    } else if (strcmp(f->op, "read") == 0) {
-        read_file(f->name, f->data);
     }
     else {
         printf("Unknown operation '%s'.\n", f->op);
