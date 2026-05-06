@@ -32,23 +32,32 @@ int main(int argc, char *argv[])
     pthread_mutex_init(&mutex_lock, NULL);
     sem_init(&open_sem, 0, 4);
 
-    struct File f;
-    pthread_t tid;
+    struct File tasks[MAX_FILES];
+    pthread_t tids[MAX_FILES];
+    int count = 0;
     char choice[4];
 
-    while(1){
-        printf("Enter operation (create/open/close/search/write/read/exit): ");
-        scanf("%s", f.op);
+    do {
+        printf("Enter operation (create/open/close/search/write): ");
+        scanf("%s", tasks[count].op);
         getchar();
-        if(strcmp(f.op, "exit") == 0)
-            break;
         printf("Enter filename: ");
-        scanf("%s", f.name);
+        scanf("%s", tasks[count].name);
         getchar();
+        count++;
 
-        pthread_create(&tid, NULL, worker, &f);
-        pthread_join(tid, NULL);
-    } 
+        printf("Continue? (y/n): ");
+        scanf("%s", choice);
+        getchar();
+    } while (strcmp(choice, "y") == 0);
+
+    // spawn all threads at once
+    for (int i = 0; i < count; i++)
+        pthread_create(&tids[i], NULL, worker, &tasks[i]);
+
+    // then join all
+    for (int i = 0; i < count; i++)
+        pthread_join(tids[i], NULL);
 
     return 0;
 }
