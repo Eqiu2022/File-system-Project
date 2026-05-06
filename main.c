@@ -51,11 +51,9 @@ int main(int argc, char *argv[])
         getchar();
     } while (strcmp(choice, "y") == 0);
 
-    // spawn all threads at once
     for (int i = 0; i < count; i++)
         pthread_create(&tids[i], NULL, worker, &tasks[i]);
 
-    // then join all
     for (int i = 0; i < count; i++)
         pthread_join(tids[i], NULL);
 
