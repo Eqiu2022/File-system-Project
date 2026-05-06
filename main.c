@@ -38,25 +38,26 @@ int main(int argc, char *argv[])
     int count = 0;
     char choice[4];
 
-    do {
+    while(1){
         printf("Enter operation (create/open/close/search/write): ");
         scanf("%s", tasks[count].op);
         getchar();
+        if(strcmp(tasks[count].op, "exit") == 0){
+            break;
+        }
         printf("Enter filename: ");
         scanf("%s", tasks[count].name);
         getchar();
         count++;
+    } 
 
-        printf("Continue? (y/n): ");
-        scanf("%s", choice);
-        getchar();
-    } while (strcmp(choice, "y") == 0);
-
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < count; i++){
         pthread_create(&tids[i], NULL, worker, &tasks[i]);
+    }
 
-    for (int i = 0; i < count; i++)
+    for (int i = 0; i < count; i++){
         pthread_join(tids[i], NULL);
+    }
 
     return 0;
 }
@@ -175,7 +176,7 @@ void *worker(void *arg) {
         if (write_file(f->name, f->data) == 0)
             printf("Data written to file '%s' successfully.\n", f->name);
         else
-            printf("Failed to write data to file '%s'.\n", f->name);
+            printf("Failed to find file '%s'.\n", f->name);
     }
     else {
         printf("Unknown operation '%s'.\n", f->op);
