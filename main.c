@@ -6,7 +6,8 @@
 #include <semaphore.h>
 
 #define MAX_NAME_LEN 256
-#define MAX_FILES 64
+#define MAX_FILES 6
+#define MAX_OPEN_FILES 2
 
 int create_file(const char *name);
 int open_file(const char *name);
@@ -30,7 +31,7 @@ sem_t open_sem;
 int main(int argc, char *argv[])
 {
     pthread_mutex_init(&mutex_lock, NULL);
-    sem_init(&open_sem, 0, 4);
+    sem_init(&open_sem, 0, MAX_OPEN_FILES);
 
     struct File tasks[MAX_FILES];
     pthread_t tids[MAX_FILES];
