@@ -16,6 +16,7 @@ int close_file(const char *name);
 int search_file(const char *name);
 int write_file(const char *name, const char *data);
 int delete_file(const char *name);
+int read_file(const char *name);
 void print_files();
 void *worker(void *arg);
 
@@ -56,7 +57,7 @@ int main(int argc, char *argv[])
 
     while(1){
         print_files();
-        printf("Enter operation (create/open/close/search/write/delete/exit): ");
+        printf("Enter operation (create/open/close/search/read/write/delete/exit): ");
         scanf("%s", tasks[count].op);
         getchar();
         if(strcmp(tasks[count].op, "exit") == 0)
@@ -212,9 +213,33 @@ void print_files() {
     printf("---------------------\n\n");
 }
 
+int read_file(const char *name) {
+    pthread_mutex_lock(&mutex_lock);
+    for (int i = 0; i < MAX_FILES; i++) {
+        if (strcmp(files[i].name, name) == 0) {
+            if (files[i].fp == NULL) {
+                printf("File '%s' is not open for reading.\n", name);
+                pthread_mutex_unlock(&mutex_lock);
+                return -1;
+            }
+            char line[1024];
+            printf("--- Contents of '%s' ---\n", name);
+            rewind(files[i].fp);
+            while (fgets(line, sizeof(line), files[i].fp) != NULL)
+                printf("%s", line);
+            printf("\n------------------------\n");
+            pthread_mutex_unlock(&mutex_lock);
+            return 0;
+        }
+    }
+    printf("File '%s' not found.\n", name);
+    pthread_mutex_unlock(&mutex_lock);
+    return -1;
+}
+
+
 void *worker(void *arg) {
     struct File *f = (struct File *)arg;
-
     if (strcmp(f->op, "create") == 0) {
         if (create_file(f->name) == 0)
             printf("File '%s' created successfully.\n", f->name);
@@ -240,6 +265,9 @@ void *worker(void *arg) {
             printf("Data written to file '%s' successfully.\n", f->name);
         else
             printf("Failed to write to file '%s'.\n", f->name);
+    } else if (strcmp(f->op, "read") == 0) {
+        if (read_file(f->name) != 0)
+            printf("Failed to read file '%s'.\n", f->name);
     } else if (strcmp(f->op, "delete") == 0) {
         if (delete_file(f->name) == 0)
             printf("File '%s' deleted successfully.\n", f->name);
