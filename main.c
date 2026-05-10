@@ -183,6 +183,7 @@ int write_file(const char *name, const char *data) {
             return 0;
         }
     }
+    printf("File '%s' not found.\n", name);
     pthread_mutex_unlock(&mutex_lock);
     return -1;
 }
@@ -205,6 +206,7 @@ int delete_file(const char *name) {
             return 0;
         }
     }
+    printf("File '%s' not found for deletion.\n", name);
     pthread_mutex_unlock(&mutex_lock);
     return -1;
 }
@@ -270,18 +272,11 @@ void *worker(void *arg) {
         printf("Enter data to write: ");
         char data[1024];
         fgets(data, sizeof(data), stdin);
-        if (write_file(f->name, data) == 0)
-            printf("Data written to file '%s' successfully.\n", f->name);
-        else
-            printf("Failed to write to file '%s'.\n", f->name);
+        write_file(f->name, data);
     } else if (strcmp(f->op, "read") == 0) {
-        if (read_file(f->name) != 0)
-            printf("Failed to read file '%s'.\n", f->name);
+        read_file(f->name);
     } else if (strcmp(f->op, "delete") == 0) {
-        if (delete_file(f->name) == 0)
-            printf("File '%s' deleted successfully.\n", f->name);
-        else
-            printf("Failed to delete file '%s'.\n", f->name);
+        delete_file(f->name);
     } else {
         printf("Unknown operation '%s'.\n", f->op);
     }
