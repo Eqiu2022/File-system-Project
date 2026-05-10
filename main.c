@@ -7,7 +7,7 @@
 #include <dirent.h>
 
 #define MAX_NAME_LEN 256
-#define MAX_FILES 6
+#define MAX_FILES 4
 #define MAX_OPEN_FILES 2
 
 int create_file(const char *name);
@@ -29,6 +29,7 @@ struct File {
 pthread_mutex_t mutex_lock;
 struct File files[MAX_FILES];
 sem_t open_sem;
+int open_count = 0;
 
 int main(int argc, char *argv[])
 {
@@ -54,24 +55,26 @@ int main(int argc, char *argv[])
         }
         closedir(dir);
     }
-
+    print_files();
     while(1){
-        print_files();
         printf("Enter operation (create/open/close/search/read/write/delete/exit): ");
         scanf("%s", tasks[count].op);
         getchar();
-        if(strcmp(tasks[count].op, "exit") == 0)
+        if(strcmp(tasks[count].op, "exit") == 0){
+            print_files();
             break;
+        }
         printf("Enter filename: ");
         scanf("%s", tasks[count].name);
         getchar();
 
         pthread_create(&tids[count], NULL, worker, &tasks[count]);
         pthread_join(tids[count], NULL);
-
+       
         if(count < MAX_FILES)
             count++;
     }
+
     return 0;
 }
 
@@ -101,6 +104,10 @@ int create_file(const char *name) {
 int open_file(const char *name) {
     sem_wait(&open_sem);
     pthread_mutex_lock(&mutex_lock);
+    if (open_count >= MAX_OPEN_FILES) {
+        pthread_mutex_unlock(&mutex_lock);
+        return -1;
+    }
     for (int i = 0; i < MAX_FILES; i++) {
         if (strcmp(files[i].name, name) == 0) {
             if (files[i].fp != NULL) {
@@ -116,6 +123,7 @@ int open_file(const char *name) {
                 sem_post(&open_sem);
                 return -1;
             }
+            open_count++;
             pthread_mutex_unlock(&mutex_lock);
             return 0;
         }
@@ -130,11 +138,13 @@ int close_file(const char *name) {
     for (int i = 0; i < MAX_FILES; i++) {
         if (strcmp(files[i].name, name) == 0) {
             if (files[i].fp == NULL) {
+                printf("File '%s' is not open.\n", name);
                 pthread_mutex_unlock(&mutex_lock);
                 return -1;
             }
             fclose(files[i].fp);
             files[i].fp = NULL;
+            open_count--;
             pthread_mutex_unlock(&mutex_lock);
             sem_post(&open_sem);
             return 0;
@@ -184,6 +194,7 @@ int delete_file(const char *name) {
             if (files[i].fp != NULL) {
                 fclose(files[i].fp);
                 files[i].fp = NULL;
+                open_count--;
                 sem_post(&open_sem);
             }
             char path[MAX_NAME_LEN];
@@ -246,15 +257,13 @@ void *worker(void *arg) {
         else
             printf("Failed to create file '%s'.\n", f->name);
     } else if (strcmp(f->op, "open") == 0) {
-        if (open_file(f->name) == 0)
-            printf("File '%s' opened successfully.\n", f->name);
-        else
-            printf("Failed to open file '%s'.\n", f->name);
+        if(open_count >= MAX_OPEN_FILES){
+            printf("Cannot open file '%s'. Maximum open files reached.\n", f->name);
+            return NULL;
+        }
+        open_file(f->name);
     } else if (strcmp(f->op, "close") == 0) {
-        if (close_file(f->name) == 0)
-            printf("File '%s' closed successfully.\n", f->name);
-        else
-            printf("Failed to close file '%s'.\n", f->name);
+        close_file(f->name);
     } else if (strcmp(f->op, "search") == 0) {
         search_file(f->name);
     } else if (strcmp(f->op, "write") == 0) {
@@ -276,5 +285,6 @@ void *worker(void *arg) {
     } else {
         printf("Unknown operation '%s'.\n", f->op);
     }
+    print_files();
     return NULL;
 }
